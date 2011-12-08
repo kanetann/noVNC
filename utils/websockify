@@ -11,6 +11,7 @@ as taken from http://docs.python.org/dev/library/ssl.html#certificates
 
 '''
 
+import Cookie
 import socket, optparse, time, os, sys, subprocess
 from select import select
 from websocket import WebSocketServer
@@ -43,6 +44,7 @@ Traffic Legend:
         self.target_port    = kwargs.pop('target_port')
         self.wrap_cmd       = kwargs.pop('wrap_cmd')
         self.wrap_mode      = kwargs.pop('wrap_mode')
+        self.token          = kwargs.pop('token')
         # Last 3 timestamps command was run
         self.wrap_times    = [0, 0, 0]
 
@@ -137,6 +139,11 @@ Traffic Legend:
         """
         Called after a new WebSocket connection has been established.
         """
+        cookie = Cookie.SimpleCookie()
+        cookie.load(self.headers.getheader('cookie'))
+        token = cookie['token'].value
+        if token != self.token:
+            raise Exception("Invalid Token")
 
         # Connect to the target
         self.msg("connecting to: %s:%s" % (
@@ -215,7 +222,7 @@ Traffic Legend:
 
 if __name__ == '__main__':
     usage = "\n    %prog [options]"
-    usage += " [source_addr:]source_port target_addr:target_port"
+    usage += " [source_addr:]source_port target_addr:target_port token"
     usage += "\n    %prog [options]"
     usage += " [source_addr:]source_port -- WRAP_COMMAND_LINE"
     parser = optparse.OptionParser(usage=usage)
@@ -244,38 +251,23 @@ if __name__ == '__main__':
             "or daemonizes: exit (default), ignore, respawn")
     (opts, args) = parser.parse_args()
 
-    # Sanity checks
-    if len(args) < 2:
-        parser.error("Too few arguments")
-    if sys.argv.count('--'):
-        opts.wrap_cmd = args[1:]
-    else:
-        opts.wrap_cmd = None
-        if len(args) > 2:
-            parser.error("Too many arguments")
-
+    opts.wrap_cmd = None
     if opts.ssl_only and not os.path.exists(opts.cert):
         parser.error("SSL only and %s not found" % opts.cert)
 
-    # Parse host:port and convert ports to numbers
-    if args[0].count(':') > 0:
-        opts.listen_host, opts.listen_port = args[0].rsplit(':', 1)
-    else:
-        opts.listen_host, opts.listen_port = '', args[0]
-
+    opts.listen_host, opts.listen_port = args[0].rsplit(':', 1)
     try:    opts.listen_port = int(opts.listen_port)
     except: parser.error("Error parsing listen port")
 
-    if opts.wrap_cmd:
-        opts.target_host = None
-        opts.target_port = None
-    else:
-        if args[1].count(':') > 0:
-            opts.target_host, opts.target_port = args[1].rsplit(':', 1)
-        else:
-            parser.error("Error parsing target")
-        try:    opts.target_port = int(opts.target_port)
-        except: parser.error("Error parsing target port")
+    opts.target_host, opts.target_port = args[1].rsplit(':', 1)
+    try:    opts.target_port = int(opts.target_port)
+    except: parser.error("Error parsing target port")
+
+    opts.token = args[2]
+    if not opts.token:
+        parser.error("Invalid token")
+
+    print("http://%s:%s/vnc_auto.html?host=%s&port=%s&token=%s" % (opts.listen_host, opts.listen_port, opts.listen_host, opts.listen_port, opts.token))
 
     # Create and start the WebSockets proxy
     server = WebSocketProxy(**opts.__dict__)

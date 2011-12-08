@@ -84,7 +84,7 @@
         }
 
         window.onload = function () {
-            var host, port, password, path;
+            var host, port, password, path, token;
 
             $D('sendCtrlAltDelButton').style.display = "inline";
             $D('sendCtrlAltDelButton').onclick = sendCtrlAltDel;
@@ -94,9 +94,10 @@
             port = WebUtil.getQueryVar('port', null);
             password = WebUtil.getQueryVar('password', '');
             path = WebUtil.getQueryVar('path', '');
-            if ((!host) || (!port)) {
+            token = WebUtil.getQueryVar('token', null);
+            if ((!host) || (!port) || (!token)) {
                 updateState('failed',
-                    "Must specify host and port in URL");
+                    "Must specify host and port and token in URL");
                 return;
             }
 
@@ -108,6 +109,7 @@
                            'view_only':    WebUtil.getQueryVar('view_only', false),
                            'updateState':  updateState,
                            'onPasswordRequired':  passwordRequired});
+            WebUtil.createCookie('token', token, 1)
             rfb.connect(host, port, password, path);
         };
         </script>
