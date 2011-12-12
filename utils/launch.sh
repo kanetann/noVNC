@@ -95,7 +95,7 @@ else
 fi
 
 echo "Starting webserver and WebSockets proxy on port ${PORT}"
-${HERE}/wsproxy.py --web ${WEB} ${CERT:+--cert ${CERT}} ${PORT} ${VNC_DEST} ${TOKEN} &
+${HERE}/wsproxy.py ${CERT:+--cert ${CERT}} ${PORT} ${VNC_DEST} ${TOKEN} &
 proxy_pid="$!"
 sleep 1
 if ! ps -p ${proxy_pid} >/dev/null; then
