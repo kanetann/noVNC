@@ -5,7 +5,7 @@ usage() {
         echo "$*"
         echo
     fi
-    echo "Usage: ${NAME} [--listen PORT] [--vnc VNC_HOST:PORT] [--cert CERT]"
+    echo "Usage: ${NAME} [--listen PORT] [--vnc VNC_HOST:PORT] [--cert CERT] [--token TOKEN]"
     echo
     echo "Starts the WebSockets proxy and a mini-webserver and "
     echo "provides a cut-and-paste URL to go to."
@@ -16,6 +16,7 @@ usage() {
     echo "                          Default: localhost:5900"
     echo "    --cert CERT           Path to combined cert/key file"
     echo "                          Default: self.pem"
+    echo "    --token TOKEN         Authenticate token."
     exit 2
 }
 
@@ -24,6 +25,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 PORT="6080"
 VNC_DEST="localhost:5900"
 CERT=""
+TOKEN=""
 proxy_pid=""
 
 die() {
@@ -50,6 +52,7 @@ while [ "$*" ]; do
     --listen)  PORT="${OPTARG}"; shift            ;;
     --vnc)     VNC_DEST="${OPTARG}"; shift        ;;
     --cert)    CERT="${OPTARG}"; shift            ;;
+    --token)   TOKEN="${OPTARG}"; shift           ;;
     -h|--help) usage                              ;;
     -*) usage "Unknown chrooter option: ${param}" ;;
     *) break                                      ;;
@@ -92,7 +95,7 @@ else
 fi
 
 echo "Starting webserver and WebSockets proxy on port ${PORT}"
-${HERE}/wsproxy.py --web ${WEB} ${CERT:+--cert ${CERT}} ${PORT} ${VNC_DEST} &
+${HERE}/wsproxy.py --web ${WEB} ${CERT:+--cert ${CERT}} ${PORT} ${VNC_DEST} ${TOKEN} &
 proxy_pid="$!"
 sleep 1
 if ! ps -p ${proxy_pid} >/dev/null; then
@@ -102,7 +105,7 @@ if ! ps -p ${proxy_pid} >/dev/null; then
 fi
 
 echo -e "\n\nNavigate to this URL:\n"
-echo -e "    http://$(hostname):${PORT}/vnc.html?host=$(hostname)&port=${PORT}\n"
+echo -e "    http://$(hostname):${PORT}/vnc_auto.html?host=$(hostname)&port=${PORT}&token=${TOKEN}\n"
 echo -e "Press Ctrl-C to exit\n\n"
 
 wait ${proxy_pid}
